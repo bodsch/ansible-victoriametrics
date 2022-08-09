@@ -1,0 +1,40 @@
+---
+
+- block:
+    - name: get checksum list
+      set_fact:
+        __victoriametrics_checksums: "{{
+          lookup('url',
+                 victoriametrics_release.download_url + '/download/v' + victoriametrics_version + '/' +
+                 download_file | victoriametrics_checksum_file('linux', go_arch) ,
+                 wantlist=True) | list
+          }}"
+      run_once: true
+
+    - name: get checksum for {{ go_arch }} architecture
+      set_fact:
+        __victoriametrics_checksum: "{{ __victoriametrics_checksums | victoriametrics_checksum(download_file) }}"
+  delegate_to: localhost
+
+- name: download {{ download_file }}
+  become: false
+  delegate_to: "{{ victoriametrics_delegate_to }}"
+  get_url:
+    url: "{{ victoriametrics_release.download_url }}/download/v{{ victoriametrics_version }}/{{ download_file }}"
+    dest: "{{ victoriametrics_local_tmp_directory }}/{{ download_file }}"
+    checksum: "sha256:{{ __victoriametrics_checksum }}"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  check_mode: false
+
+- name: extract {{ download_file }}
+  become: false
+  delegate_to: "{{ victoriametrics_delegate_to }}"
+  unarchive:
+    src: "{{ victoriametrics_local_tmp_directory }}/{{ download_file }}"
+    dest: "{{ victoriametrics_local_tmp_directory }}/"
+    copy: false
+
+...

@@ -1,0 +1,10 @@
+---
+
+victoriametrics_requirements:
+  - iproute
+
+victoriametrics_config_directory: /etc/sysconfig
+
+systemd_lib_directory: /usr/lib/systemd/system
+
+...

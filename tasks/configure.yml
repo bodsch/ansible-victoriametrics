@@ -1,0 +1,23 @@
+---
+
+- name: create victoriametrics configuration directories
+  file:
+    path: "{{ victoriametrics_config_directory }}"
+    state: directory
+    owner: root
+    group: "{{ victoriametrics_system_group }}"
+    mode: 0770
+
+- name: create systemd victoriametrics config
+  template:
+    src: victoriametrics.j2
+    dest: "{{ victoriametrics_config_directory }}/victoriametrics"
+    mode: 0644
+  notify:
+    - daemon-reload
+    - restart victoriametrics
+
+- name: flush handlers
+  meta: flush_handlers
+
+...

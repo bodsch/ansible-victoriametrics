@@ -1,0 +1,20 @@
+---
+
+victoriametrics_version: latest
+
+# https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.76.1/victoria-metrics-amd64-v1.76.1.tar.gz
+
+victoriametrics_release:
+  download_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases
+  files:
+    - victoria-metrics-{{ go_arch }}-v{{ victoriametrics_version }}.tar.gz
+    - vmutils-{{ go_arch }}-v{{ victoriametrics_version }}.tar.gz
+
+victoriametrics_system_user: victoriametrics
+victoriametrics_system_group: victoriametrics
+
+victoriametrics_direct_download: false
+
+victoriametrics_service: {}
+
+...

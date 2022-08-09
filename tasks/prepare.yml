@@ -1,0 +1,155 @@
+---
+
+- name: include OS specific configuration ({{ ansible_distribution }} ({{ ansible_os_family }}) {{ ansible_distribution_major_version }})
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      paths:
+        - "vars"
+      files:
+        # eg. debian-10 / ubuntu-20.04 / centos-8 / oraclelinux-8
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        # eg. archlinux-systemd / archlinux-openrc
+        - "{{ ansible_distribution | lower }}-{{ ansible_service_mgr | lower }}.yml"
+        # eg. debian / ubuntu / centos / oraclelinux
+        - "{{ ansible_distribution | lower }}.yml"
+        # eg. redhat / debian / archlinux
+        - "{{ ansible_os_family | lower }}.yml"
+        - default.yaml
+      skip: true
+
+- name: update package cache
+  package:
+    update_cache: true
+
+- name: define delegate instance for download handling
+  set_fact:
+    victoriametrics_delegate_to: "{{ ansible_host }}"
+    victoriametrics_local_tmp_directory: "{{
+        lookup('env', 'CUSTOM_LOCAL_TMP_DIRECTORY') |
+        default('/var/cache/ansible/victoriametrics', true) }}/{{ victoriametrics_version }}"
+  when:
+    - victoriametrics_direct_download
+
+- name: install dependency
+  package:
+    name: "{{ victoriametrics_requirements }}"
+    state: present
+
+- block:
+    - name: get latest release
+      uri:
+        url: "https://api.github.com/repos/VictoriaMetrics/VictoriaMetrics/releases/latest"
+        method: GET
+        return_content: true
+        status_code: 200
+        body_format: json
+        validate_certs: false
+        user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+      no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+      register: _latest_release
+      until: _latest_release.status == 200
+      retries: 5
+
+    - name: set victoriametrics version to {{ _latest_release.json.tag_name[1:] }}
+      set_fact:
+        victoriametrics_version: "{{ _latest_release.json.tag_name[1:] }}"
+  when:
+    - victoriametrics_version == "latest"
+
+- name: detect our installation path '{{ victoriametrics_install_path | dirname }}'
+  stat:
+    path: "{{ victoriametrics_install_path | dirname }}"
+    get_checksum: false
+  register: stat_victoriametrics_path
+  ignore_errors: true
+
+- name: old installation
+  block:
+    - name: stop old service
+      service:
+        name: victoriametrics
+        state: stopped
+        enabled: false
+
+    - name: remove installed systemd unit
+      file:
+        state: absent
+        path: /etc/systemd/system/victoriametrics.service
+
+    - name: remove installed victoriametrics
+      file:
+        state: absent
+        path: "{{ stat_victoriametrics_path.stat.path }}"
+
+    - name: flush handlers
+      meta: flush_handlers
+  when:
+    - stat_victoriametrics_path is defined
+    - stat_victoriametrics_path.stat is defined
+    - stat_victoriametrics_path.stat.islnk is defined
+    - stat_victoriametrics_path.stat.islnk
+
+
+- name: detect installed victoriametrics binary
+  stat:
+    path: "{{ victoriametrics_install_path }}/victoriametrics"
+  register: stat_victoriametrics_binary
+
+- name: create download directory
+  become: false
+  delegate_to: "{{ victoriametrics_delegate_to }}"
+  file:
+    path: "{{ victoriametrics_local_tmp_directory }}"
+    state: directory
+    mode: 0750
+
+- name: user and group handling
+  block:
+    - name: create victoriametrics group
+      group:
+        name: "{{ victoriametrics_system_group }}"
+        state: present
+        system: true
+
+    - name: create victoriametrics user
+      user:
+        name: "{{ victoriametrics_system_user }}"
+        groups: "{{ victoriametrics_system_group }}"
+        append: true
+        shell: /usr/sbin/nologin
+        system: true
+        createhome: false
+        home: /nonexistent
+  when:
+    - victoriametrics_system_user != "root"
+
+- name: create install directory
+  file:
+    path: "{{ victoriametrics_install_path }}"
+    state: directory
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+    mode: 0755
+
+- name: fix directory rights for {{ victoriametrics_install_path | dirname }}
+  file:
+    path: "{{ victoriametrics_install_path | dirname }}"
+    state: directory
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+    mode: 0755
+    recurse: true
+
+- name: merge victoriametrics download configuration between defaults and custom
+  set_fact:
+    victoriametrics_release: "{{ victoriametrics_defaults_release |
+      combine( victoriametrics_release, recursive=True ) }}"
+
+- name: merge victoriametrics service configuration between defaults and custom
+  set_fact:
+    victoriametrics_service: "{{ victoriametrics_defaults_service |
+      combine( victoriametrics_service, recursive=True ) }}"
+
+...

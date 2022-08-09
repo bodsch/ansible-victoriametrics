@@ -1,0 +1,38 @@
+---
+
+galaxy_info:
+  role_name: victoriametrics
+  namespace: bodsch
+
+  author: Bodo Schulz
+  description: ansible role to setup prometheus-victoriametrics
+  license: Apache
+  min_ansible_version: 2.10
+
+  platforms:
+    - name: ArchLinux
+    - name: Debian
+      versions:
+        # 10
+        - buster
+        # 11
+        - bullseye
+    - name: Ubuntu
+      versions:
+        # 20.04
+        - focal
+    - name: EL
+      versions:
+        - 8
+
+  galaxy_tags:
+    - prometheus
+    - victoriametrics
+    - collector
+    - monitoring
+    - metrics
+    - system
+
+dependencies: []
+
+...

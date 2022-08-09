@@ -1,0 +1,21 @@
+---
+
+- name: restart victoriametrics
+  become: true
+  service:
+    name: victoriametrics
+    state: restarted
+
+- name: reload victoriametrics
+  become: true
+  service:
+    name: victoriametrics
+    state: reloaded
+
+- name: daemon-reload
+  become: true
+  systemd:
+    daemon_reload: true
+    force: true
+
+...

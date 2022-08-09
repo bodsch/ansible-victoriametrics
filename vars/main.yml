@@ -1,0 +1,56 @@
+---
+
+victoriametrics_defaults_release:
+  download_url: https://github.com/prometheus/victoriametrics/releases/
+  file: victoriametrics-{{ victoriametrics_version }}.linux-{{ go_arch }}.tar.gz
+
+victoriametrics_main_version: "{{ victoriametrics_version[0:3] }}"
+
+victoriametrics_install_path: /usr/local/bin/victoriametrics/{{ victoriametrics_version }}
+
+victoriametrics_delegate_to: localhost
+
+victoriametrics_local_tmp_directory: "{{
+  lookup('env', 'CUSTOM_LOCAL_TMP_DIRECTORY') |
+  default(lookup('env', 'HOME') ~ '/.cache/ansible/victoriametrics', true) }}/{{ victoriametrics_version }}"
+
+victoriametrics_requirements:
+  - iproute2
+
+victoriametrics_defaults_service:
+  log:
+    level: info
+    format: ""
+  http:
+    connTimeout:
+    disableResponseCompression:
+    idleConnTimeout:
+    maxGracefulShutdownDuration:
+    pathPrefix:
+    shutdownDelay:
+  promscrape:
+    config:
+      prometheus_file:
+      dryRun:
+      strictParse:
+    cluster:
+      memberNum:
+      membersCount:
+      replicationFactor:
+
+  push:
+    disable_consistency_check: false
+
+victoriametrics_config_directory: /etc/default
+
+systemd_lib_directory: /lib/systemd/system
+
+go_arch_map:
+  i386: '386'
+  x86_64: 'amd64'
+
+go_arch: "{{
+  go_arch_map[ansible_architecture] |
+  default(ansible_architecture) }}"
+
+...

@@ -1,0 +1,33 @@
+---
+
+- name: propagate victoriametrics binaries
+  copy:
+    src: "{{ victoriametrics_local_tmp_directory }}/{{ item }}"
+    dest: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    mode: 0755
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+    remote_src: "{{ 'true' if victoriametrics_direct_download else 'false' }}"
+  register: __copy_files
+
+- name: make files executable
+  file:
+    path: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    mode: 0755
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+
+- name: d
+  debug:
+    msg: "{{ __copy_files }}"
+
+- name: create link to binary
+  file:
+    src: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    dest: "/usr/bin/{{ item | replace('-prod','') }}"
+    state: link
+    force: true
+  notify:
+    - restart victoriametrics
+
+...

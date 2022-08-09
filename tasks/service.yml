@@ -1,0 +1,13 @@
+---
+
+- name: restart victoriametrics if needed
+  meta: flush_handlers
+
+- name: ensure victoriametrics is enabled on boot
+  become: true
+  service:
+    name: victoriametrics
+    enabled: true
+    state: started
+
+...

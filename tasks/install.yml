@@ -1,0 +1,96 @@
+---
+
+
+- name: propagate victoriametrics binaries
+  copy:
+    src: "{{ victoriametrics_local_tmp_directory }}/{{ item }}"
+    dest: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    mode: 0755
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+    remote_src: "{{ 'true' if victoriametrics_direct_download else 'false' }}"
+  loop:
+    - victoria-metrics-prod
+    - vmagent-prod
+    - vmalert-prod
+    - vmauth-prod
+    - vmbackup-prod
+    - vmctl-prod
+    - vmrestore-prod
+  loop_control:
+    label: "{{ item }}"
+  register: __copy_files
+
+# - name: detect changes
+#   set_fact:
+#     victoriametrics_changed_files: "{{ __copy_files.results | selectattr('changed', 'equalto', True) | map(attribute='item') | list }}"
+#   when:
+#     - __copy_files
+#
+# - name: reporting changes
+#   debug:
+#     msg: "{{ victoriametrics_changed_files }}"
+#   when:
+#     - victoriametrics_changed_files
+
+- name: make files executable
+  file:
+    path: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    mode: 0755
+    owner: "{{ victoriametrics_system_user }}"
+    group: "{{ victoriametrics_system_group }}"
+  loop:
+    - victoria-metrics-prod
+    - vmagent-prod
+    - vmalert-prod
+    - vmauth-prod
+    - vmbackup-prod
+    - vmctl-prod
+    - vmrestore-prod
+  loop_control:
+    label: "{{ item }}"
+
+- name: create link to binary
+  file:
+    src: "{{ victoriametrics_install_path }}/{{ item | replace('-prod','') }}"
+    dest: "/usr/bin/{{ item | replace('-prod','') }}"
+    state: link
+    force: true
+  loop:
+    - victoria-metrics-prod
+    - vmagent-prod
+    - vmalert-prod
+    - vmauth-prod
+    - vmbackup-prod
+    - vmctl-prod
+    - vmrestore-prod
+  loop_control:
+    label: "{{ item }}"
+  register: __link_files
+  notify:
+    - restart victoriametrics
+
+# - name: detect changes
+#   set_fact:
+#     victoriametrics_changed_links: "{{ __link_files.results | selectattr('changed', 'equalto', True) | map(attribute='item') | list }}"
+#   when:
+#     - __link_files
+#
+# - name: reporting changes
+#   debug:
+#     msg: "{{ victoriametrics_changed_links }}"
+#   when:
+#     - victoriametrics_changed_links
+
+- name: create systemd service unit
+  template:
+    src: "init/systemd/victoriametrics.service.j2"
+    dest: "{{ systemd_lib_directory }}/victoriametrics.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - daemon-reload
+    - restart victoriametrics
+
+...

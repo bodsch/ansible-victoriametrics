@@ -1,0 +1,24 @@
+---
+
+- name: prepare
+  include_tasks: prepare.yml
+
+- name: download archive
+  include_tasks: download.yml
+  when:
+    - not stat_victoriametrics_binary.stat.exists or
+      not stat_victoriametrics_binary.stat.path == victoriametrics_install_path ~ '/victoriametrics'
+
+- name: install
+  include_tasks: install.yml
+  when:
+    - not stat_victoriametrics_binary.stat.exists or
+      not stat_victoriametrics_binary.stat.path == victoriametrics_install_path ~ '/victoriametrics'
+#
+# - name: configure
+#   include_tasks: configure.yml
+#
+# - name: service
+#   include_tasks: service.yml
+
+...
